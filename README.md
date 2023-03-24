@@ -5,7 +5,7 @@
 ## :space_invader: Olá, eu sou Mateus Kalleb Cintra
 
 - 🔭 Cursando 4° período de Ciência da Computação (UFG)
-- 🌱 Estudando diversas matérias e aprendendo Flutter
+- 🌱 Estudando diversas matérias e aprendendo Swift, Java e Flutter
 - 📫 Contato pelo email: cassintra1080@gmail.com
 
 Iniciante no mundo da Programação!
