@@ -1,4 +1,4 @@
-<img src="https://cdn.discordapp.com/attachments/1053792279275507715/1053792904608481280/PB_Business_Card.png">
+<!--<img src="https://cdn.discordapp.com/attachments/1053792279275507715/1053792904608481280/PB_Business_Card.png">-->
 
 ##
 
