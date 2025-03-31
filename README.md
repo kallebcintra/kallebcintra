@@ -4,7 +4,7 @@
 
 ## :space_invader: Olá, eu sou Mateus Kalleb Cintra
 
-- 🔭 Cursando 7° período de Ciência da Computação (UFG)
+- 🔭 Cursando 9° período de Ciência da Computação (UFG)
 - 🌱 Estudando diversas matérias e aprendendo Angular, JavaScript, Java e Spring Boot
 - 📫 Contato pelo email: cassintra1080@gmail.com
 
