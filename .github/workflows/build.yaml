@@ -37,6 +37,43 @@ jobs:
             exit 1
           fi
           echo "ACCESS_TOKEN is set (${#ACCESS_TOKEN} chars)."
+          case "$ACCESS_TOKEN" in
+            github_pat_*|ghp_*) echo "Token prefix looks valid." ;;
+            *)
+              echo "::error::ACCESS_TOKEN does not look like a GitHub PAT (expected github_pat_... or ghp_...). Re-paste the token value, not the token name."
+              exit 1
+              ;;
+          esac
+      - name: Probe GitHub GraphQL
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os, json, urllib.request
+          token = os.environ["ACCESS_TOKEN"].strip()
+          req = urllib.request.Request(
+              "https://api.github.com/graphql",
+              data=json.dumps({"query": "query { viewer { login } }"}).encode(),
+              headers={
+                  "Authorization": f"Bearer {token}",
+                  "Content-Type": "application/json",
+                  "User-Agent": "kallebcintra-readme-build",
+              },
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  body = json.loads(resp.read().decode())
+          except Exception as e:
+              raise SystemExit(f"GraphQL probe HTTP failure: {e}")
+          print(json.dumps(body, indent=2)[:1000])
+          if body.get("errors"):
+              raise SystemExit("GraphQL probe returned errors (see above). Check PAT permissions.")
+          login = (body.get("data") or {}).get("viewer", {}).get("login")
+          if login != "kallebcintra":
+              raise SystemExit(f"Expected viewer login kallebcintra, got {login!r}")
+          print(f"GraphQL OK as {login}")
+          PY
       - name: Update README file
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
