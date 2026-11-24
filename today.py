@@ -10,8 +10,14 @@ import hashlib
 # Account permissions: read:Followers, read:Starring, read:Watching
 # Repository permissions: read:Commit statuses, read:Contents, read:Issues, read:Metadata, read:Pull Requests
 # Issues and pull requests permissions not needed at the moment, but may be used in the future
-HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
-USER_NAME = os.environ['USER_NAME'] # 'Andrew6rant'
+ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN', '').strip()
+USER_NAME = os.environ.get('USER_NAME', 'kallebcintra').strip() or 'kallebcintra'
+if not ACCESS_TOKEN:
+    raise SystemExit(
+        'ACCESS_TOKEN is empty. Add a repo secret named ACCESS_TOKEN '
+        '(fine-grained PAT with read access to your repos + Followers/Starring/Watching).'
+    )
+HEADERS = {'Authorization': f'Bearer {ACCESS_TOKEN}'}
 QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
 
 
