@@ -49,15 +49,22 @@ def format_plural(unit):
 def simple_request(func_name, query, variables):
     """
     Returns a request, or raises an Exception if the response does not succeed.
+    Partial GraphQL errors (e.g. org FORBIDDEN on some edges) are logged and allowed
+    when `data` is still present — those null edges are filtered later.
     """
     request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables':variables}, headers=HEADERS)
     if request.status_code != 200:
         raise Exception(f'{func_name} failed HTTP {request.status_code}: {request.text[:500]} | counts={QUERY_COUNT}')
     payload = request.json()
-    if payload.get('errors'):
-        raise Exception(f'{func_name} GraphQL errors: {payload["errors"]} | counts={QUERY_COUNT}')
     if payload.get('data') is None:
         raise Exception(f'{func_name} returned empty data: {payload} | counts={QUERY_COUNT}')
+    if payload.get('errors'):
+        # Org policies (token lifetime, SSO, etc.) often forbid a subset of repos.
+        types = sorted({e.get('type') or e.get('extensions', {}).get('code') or 'UNKNOWN' for e in payload['errors']})
+        print(f'   warning: {func_name} partial GraphQL errors ({len(payload["errors"])}): {types}')
+        sample = payload['errors'][0].get('message', '')
+        if sample:
+            print(f'            e.g. {sample[:180]}')
     return request
 
 
@@ -219,11 +226,13 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
     }'''
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
-    if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:   # If repository data has another page
-        edges += request.json()['data']['user']['repositories']['edges']            # Add on to the LoC count
-        return loc_query(owner_affiliation, comment_size, force_cache, request.json()['data']['user']['repositories']['pageInfo']['endCursor'], edges)
-    else:
-        return cache_builder(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
+    page = request.json()['data']['user']['repositories']
+    # Drop edges blocked by org token/SSO policies (node comes back null)
+    page_edges = [e for e in page['edges'] if e and e.get('node') and e['node'].get('nameWithOwner')]
+    if page['pageInfo']['hasNextPage']:
+        edges += page_edges
+        return loc_query(owner_affiliation, comment_size, force_cache, page['pageInfo']['endCursor'], edges)
+    return cache_builder(edges + page_edges, comment_size, force_cache)
 
 
 def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
@@ -323,7 +332,9 @@ def stars_counter(data):
     Count total stars in repositories owned by me
     """
     total_stars = 0
-    for node in data: total_stars += node['node']['stargazers']['totalCount']
+    for node in data:
+        if node and node.get('node') and node['node'].get('stargazers'):
+            total_stars += node['node']['stargazers']['totalCount']
     return total_stars
 
 
